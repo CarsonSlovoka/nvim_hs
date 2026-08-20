@@ -23,6 +23,8 @@ package.path = table.concat(module_paths, ";") .. ";" .. package.path
 
 
 local protocol = require("nvim_hs.protocol")
+-- print(vim.inspect(vim.loader.find("nvim_hs.protocol", { all = true }))) -- 如果載入的module找不到，或者懷疑找錯路徑，可以這樣來查
+-- print(vim.loader.find("nvim_hs.protocol", { all = true })[1].modpath)
 local registry = require("nvim_hs.registry") -- ../hammerspoon/nvim_hs/registry.lua
 local dispatcher = require("nvim_hs.dispatcher")
 

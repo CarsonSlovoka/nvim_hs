@@ -117,9 +117,44 @@ require("nvim_hs.command").setup()
 
 或者也可以用建立連結的方式
 
+```lua
+for _, path in  vim.split(vim.opt.runtimepath._value, ",") do
+  print(path)
+end
+-- 例如，你可能會看到以下的路徑
+-- ~/.local/share/nvim/site
+-- /etc/xdg/nvim
+-- /usr/share/nvim/site
+--
+-- 所以生成的內容在以下的位置都行
+-- ~/.local/share/nvim/site/pack/*/opt/{name}  👈 我們選這個來加
+-- /etc/xdg/nvim/pack/*/opt/{name}
+-- /usr/share/nvim/site/pack/*/opt/{name}
+
+```
+
+
 ```sh
-ln -siv $(realpath ./nvim/lua/nvim_hs) ~/.config/nvim/lua/nvim_hs
-ln -siv $(realpath ./nvim/lua/nvim_hs/init.lua) ~/.config/nvim/lua/nvim_hs.lua # 讓 require("nvim_hs") 能有用
+mkdir -pv ~/.local/share/nvim/site/pack/mine/opt/
+ln -siv   $(realpath ./nvim) ~/.local/share/nvim/site/pack/mine/opt/nvim_hs
+```
+
+完成之後在 nvim 中可以使用 vim.cmd.packadd 來加入
+
+
+```lua
+vim.cmd.packadd("nvim_hs") -- nvim/lua/nvim_hs.lua
+require("nvim_hs.command").setup()
+```
+
+
+---
+
+
+```sh
+# 底下樣加了之後，去跑 tests/test_hs_framework.lua 會失敗, 因為nvim_hs會抓錯人
+# ln -siv $(realpath ./nvim/lua/nvim_hs)     ~/.config/nvim/lua/nvim_hs
+# ln -siv $(realpath ./nvim/lua/nvim_hs.lua) ~/.config/nvim/lua/nvim_hs.lua # 讓 require("nvim_hs") 能有用
 ```
 
 ---
@@ -256,18 +291,8 @@ or the `vim.inspect` equivalent.
 
 ### Neovim-side protocol tests
 
-```vim
-:luafile /path/to/repo/tests/test_protocol_nvim.lua
-```
-
-(or headless)
-
-### Hammerspoon-side framework tests
-
-In the Hammerspoon console:
-
-```lua
-hs.dofile("/path/to/repo/tests/test_hs_framework.lua")
+```sh
+nvim -l tests/test_hs_framework.lua
 ```
 
 These cover:
