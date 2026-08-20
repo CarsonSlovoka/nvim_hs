@@ -1,9 +1,14 @@
---- Minimal pure-Lua style tests for Neovim-side protocol.
---- Run inside Neovim:
----   :luafile tests/test_protocol_nvim.lua
---- or
----   nvim --headless -c 'luafile tests/test_protocol_nvim.lua' -c 'qa'
+--- nvim -l test_protocol_nvim.lua
 
+local script_file = debug.getinfo(1, "S").source:sub(2)
+script_file = assert(vim.uv.fs_realpath(script_file))
+local git_root = vim.fn.fnamemodify(script_file, ":h:h:p")
+local hammerspoon_dir = vim.fs.joinpath(git_root, "nvim/lua")
+local module_paths = {
+  hammerspoon_dir .. "/?.lua",
+  hammerspoon_dir .. "/?/init.lua",
+}
+package.path = table.concat(module_paths, ";") .. ";" .. package.path
 local protocol = require("nvim_hs.protocol")
 
 local failures = 0
