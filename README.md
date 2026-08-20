@@ -329,3 +329,12 @@ Only `transport.lua` ever mentions the `hs` binary.
 2. Introduce `app.*` / `window.*` once the error-handling surface is solid.
 3. Optional: completion for `:Hs` that calls `system.list`.
 4. Optional: asynchronous `run_async` API.
+
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+**Note:** This project is a client/framework that communicates with [Hammerspoon](https://www.hammerspoon.org/) via its official IPC/`hs` CLI.
+
+Hammerspoon itself is also licensed under the MIT License and is not distributed with this repository.
