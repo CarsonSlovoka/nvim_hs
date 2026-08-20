@@ -36,6 +36,10 @@ return string.format(
 )
 ```
 
+## ✨ 特色
+
+- 統一: 只用一個指令`:Hs`就能做所有的事: 複雜的參數可用json來傳. 因為在nvim上可以有補全和歷史輸入記錄, 所以即便參數很複雜也不會太難輸入
+
 
 ## 1. Repository structure
 
@@ -154,10 +158,13 @@ local r1 = hs.run("system.ping")
 -- → { ok = true, data = "pong" }
 
 local r2 = hs.run("system.list")
+print(vim.inspect(require("nvim_hs").run("system.list")))
 -- → { ok = true, data = { "system.list", "system.ping" } }
 
 local r3 = hs.run("foo.bar")
 -- → { ok = false, error = { code = "ACTION_NOT_FOUND", message = "Unknown action: foo.bar" } }
+
+print(vim.inspect(require("nvim_hs").run('audiodevice.set_volume', { value=30 }))) -- `git show -p 6d65aeb5:nvim/lua/nvim_hs.lua | bat -l lua -P -r 14:24 -r 53`
 ```
 
 ### From the command line inside Neovim
@@ -170,6 +177,11 @@ local r3 = hs.run("foo.bar")
 ```
 
 `:Hs` is only a thin frontend that calls [nvim_hs.run()](https://github.com/CarsonSlovoka/nvim_hs/blob/b25185b5e03788b740709e2510aacfd9bd2cde84/nvim/lua/nvim_hs.lua#L14-L50)
+
+
+```vim
+:Hs audiodevice.set_volume {"value":30}
+```
 
 ---
 

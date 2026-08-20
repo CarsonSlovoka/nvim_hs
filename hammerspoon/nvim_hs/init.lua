@@ -11,6 +11,7 @@ local system = require("nvim_hs.actions.system") -- 這邊註冊了自定義的�
 
 -- Register built-in actions once at load time.
 system.register()
+require("nvim_hs.actions.audiodevice").register()
 
 local M = {}
 

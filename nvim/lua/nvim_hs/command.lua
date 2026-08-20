@@ -77,13 +77,16 @@ function M.setup()
   end, {
     nargs = "+",
     desc = "Run a Hammerspoon action via nvim_hs (e.g. :Hs system.ping)",
-    complete = function()
+    complete = function(arg_lead)
       -- Future: could call system.list for completion, but keep minimal for v1
-      return {
+      local cmp_list = {
         -- 這邊能傳什麼，還是要看hammerspoon定義了什麼: `git show -p d632304b:hammerspoon/nvim_hs/actions/system.lua | bat -l lua -P -r 26:29`
+        -- ../../../hammerspoon/nvim_hs/actions/
         "system.ping",
-        "system.list"
+        "system.list",
+        "audiodevice.set_volume",
       }
+      return #arg_lead > 0 and vim.fn.matchfuzzy(cmp_list, arg_lead) or cmp_list
     end,
   })
 end

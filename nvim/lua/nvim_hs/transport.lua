@@ -17,7 +17,7 @@ local function build_expression(b64)
   -- We deliberately keep the expression simple and quote-safe.
   -- The Base64 alphabet does not contain single quotes, so embedding is safe.
   return string.format(
-    [[return require("nvim_hs").handle(%q)]],
+    [[return require("nvim_hs").handle(%q)]], -- `git show -p b25185b5:hammerspoon/nvim_hs/init.lua | bat -l lua -P -r 18:37`
     b64
   )
 end
