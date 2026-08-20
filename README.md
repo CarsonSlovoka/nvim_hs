@@ -63,6 +63,9 @@ hs -c 'return "hello"'
 ```bash
 # example
 ln -s /path/to/this/repo/hammerspoon/nvim_hs ~/.hammerspoon/nvim_hs
+
+# 或者
+ln -siv $(realpath ./hammerspoon/nvim_hs) ~/.hammerspoon/nvim_hs
 ```
 
 Then in `~/.hammerspoon/init.lua`:
@@ -112,6 +115,12 @@ Then register the `:Hs` command (recommended once at startup):
 require("nvim_hs.command").setup()
 ```
 
+或者也可以用建立連結的方式
+
+```sh
+ln -siv $(realpath ./nvim/lua/nvim_hs) ~/.config/nvim/lua/nvim_hs
+ln -siv $(realpath ./nvim/lua/nvim_hs/init.lua) ~/.config/nvim/lua/nvim_hs.lua # 讓 require("nvim_hs") 能有用
+```
 
 ---
 
