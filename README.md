@@ -1,15 +1,41 @@
 # nvim_hs – Neovim × Hammerspoon Command Framework
 
-Minimal, structured, end-to-end command framework that lets Neovim call named actions running inside Hammerspoon.
-
-**First version (bootstrap)** only implements:
-
-- `system.ping`
-- `system.list`
-
-All other domains (`app.*`, `window.*`, …) are intentionally deferred until the core transport / protocol / registry path is proven stable.
+能在nvim與hammerspoon來通信，使得也能用nvim來操作hammerspoon的相關函數
 
 ---
+
+
+## 原理
+
+```lua
+require("hs.ipc") -- 當hammerspoon使用了IPC, 那麼終端機就能使用指令`hs -c ...`這個就能使用
+```
+
+
+```sh
+hs -c 'return require("myLib")'        # 當中的查找的路徑包含了: ~/.hammerspoon/myLib/init.lua
+hs -c 'return require("myLib.hello")'  # ~/.hammerspoon/myLib/hello.lua
+# 因此只要把想要的實作，寫入到這些檔案即可. hs裡面提供了很多操控系統的函數能使用，這比直接從nvim去寫相關內容會輕鬆許多
+```
+
+> [!WARNING] 需要注意的是require的內容如果只寫module而是只接展開，那麼require的特性多次引用只會有一次，所以下次再呼叫將會無效
+
+至於nvim與其溝通的部份，只要讓nvim去用
+
+> `hs -c '...'`
+
+想辦法做到這事，那麼剩下來就是hammerspoon的lua來決定
+
+而為了讓IPC能夠順利, 會將內容用b64來傳
+
+```lua
+-- `git show -p 6d65aeb5:nvim/lua/nvim_hs/transport.lua | bat -l lua -P -r 12:23`
+return string.format(
+  [[return require("nvim_hs").handle(%q)]],  -- nvim_hs 指的是: ./hammerspoon/nvim_hs/init.lua
+  b64
+)
+```
+
 
 ## 1. Repository structure
 
