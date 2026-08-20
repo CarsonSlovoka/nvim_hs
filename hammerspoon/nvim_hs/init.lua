@@ -1,0 +1,40 @@
+--- nvim_hs
+--- Hammerspoon-side framework entry point.
+--- Loads protocol, registry, dispatcher and built-in system actions.
+--- Exposes a single public function that the CLI calls with a Base64 request.
+
+local protocol = require("nvim_hs.protocol")
+local dispatcher = require("nvim_hs.dispatcher")
+local system = require("nvim_hs.actions.system")
+
+-- Register built-in actions once at load time.
+system.register()
+
+local M = {}
+
+--- Handle a Base64-encoded request string coming from `hs -c`.
+--- Always returns a JSON string (the response) so that the CLI stdout is clean.
+--- @param b64 string  Base64(JSON(request))
+--- @return string  JSON(response)
+function M.handle(b64)
+  local req, err = protocol.decode(b64)
+  if not req then
+    local resp = protocol.err("DECODE_ERROR", err or "Failed to decode request")
+    return hs.json.encode(resp)
+  end
+
+  local resp = dispatcher.dispatch(req)
+  local ok, json = pcall(hs.json.encode, resp)
+  if not ok then
+    local fallback = protocol.err("ENCODE_ERROR", "Failed to encode response: " .. tostring(json))
+    return hs.json.encode(fallback)
+  end
+  return json
+end
+
+-- Also expose for convenience / debugging.
+M.protocol = protocol
+M.registry = require("nvim_hs.registry")
+M.dispatcher = dispatcher
+
+return M
