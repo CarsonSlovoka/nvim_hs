@@ -1,7 +1,7 @@
 --- nvim_hs.command
 --- Defines the :Hs user command.  It is only a frontend to nvim_hs.run().
 
-local nvim_hs = require("nvim_hs")
+local nvim_hs = require("nvim_hs") -- ../nvim_hs.lua
 
 local M = {}
 
@@ -79,7 +79,11 @@ function M.setup()
     desc = "Run a Hammerspoon action via nvim_hs (e.g. :Hs system.ping)",
     complete = function()
       -- Future: could call system.list for completion, but keep minimal for v1
-      return { "system.ping", "system.list" }
+      return {
+        -- 這邊能傳什麼，還是要看hammerspoon定義了什麼: `git show -p d632304b:hammerspoon/nvim_hs/actions/system.lua | bat -l lua -P -r 26:29`
+        "system.ping",
+        "system.list"
+      }
     end,
   })
 end

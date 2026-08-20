@@ -23,14 +23,17 @@ function M.run(action, payload)
     return protocol.err("INVALID_ARGUMENT", "payload must be a table or nil")
   end
 
+  -- print("action: " .. action)
+  -- print("payload: " .. vim.inspect(payload))
+
   local b64, enc_err = protocol.encode_request(action, payload)
   if not b64 then
     return protocol.err("ENCODE_ERROR", enc_err or "Failed to encode request")
   end
 
-  local stdout, transport_err = transport.execute(b64)
+  local stdout, transport_err = transport.execute(b64) -- 跑 hs -c
   if not stdout then
-    return transport_err -- already a protocol error table
+    return transport_err                               -- already a protocol error table
   end
 
   local resp, dec_err = protocol.decode_response(stdout)

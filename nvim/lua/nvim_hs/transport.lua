@@ -23,10 +23,14 @@ local function build_expression(b64)
 end
 
 --- Execute a Base64 request via `hs -c` and return the raw stdout.
+---
+--- 這邊傳進來的參數就已經是b64了，所以不建議從這裡debug
+---
 --- @param b64 string
 --- @return string|nil stdout
 --- @return table|nil err_resp  protocol error table if transport failed
 function M.execute(b64)
+  -- print("before b64 " .. b64)
   local expr = build_expression(b64)
 
   local ok, result = pcall(function()
@@ -48,7 +52,7 @@ function M.execute(b64)
     return nil, protocol.err("TRANSPORT_ERROR", "Failed to spawn hs: " .. msg)
   end
 
-  local completed = result  -- vim.SystemCompleted
+  local completed = result -- vim.SystemCompleted
 
   if completed.code ~= 0 then
     local stderr = (completed.stderr or ""):gsub("%s+$", "")
@@ -56,7 +60,9 @@ function M.execute(b64)
 
     -- Common cases
     if stderr:find("Unable to connect") or stderr:find("not running") or completed.code == 69 then
-      return nil, protocol.err("HS_NOT_RUNNING", "Hammerspoon is not running or IPC is unavailable. Start Hammerspoon and ensure require('hs.ipc') is loaded.")
+      return nil,
+          protocol.err("HS_NOT_RUNNING",
+            "Hammerspoon is not running or IPC is unavailable. Start Hammerspoon and ensure require('hs.ipc') is loaded.")
     end
 
     local detail = stderr ~= "" and stderr or stdout
@@ -67,7 +73,7 @@ function M.execute(b64)
   end
 
   local stdout = completed.stdout or ""
-  stdout = stdout:gsub("%s+$", "")  -- strip trailing whitespace/newline
+  stdout = stdout:gsub("%s+$", "") -- strip trailing whitespace/newline
 
   if stdout == "" then
     return nil, protocol.err("EMPTY_RESPONSE", "hs returned empty stdout")

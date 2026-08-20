@@ -80,22 +80,11 @@ ln -siv $(realpath ./hammerspoon/nvim_hs) ~/.hammerspoon/nvim_hs
 
 ## 3. Neovim setup
 
-Add the `nvim/` directory to your runtime path, e.g. in `init.lua`:
+能用建立連結的方式來安裝此[nvim的插件](./nvim)
 
-```lua
-vim.opt.rtp:prepend("/path/to/this/repo/nvim")
-```
+因為我們打算用`vim.cmd.packadd`來加入, 所以可以自己找想要的路徑
 
-(or use a plugin manager that points at the `nvim/` folder).
-
-Then register the `:Hs` command (recommended once at startup):
-
-```lua
-require("nvim_hs.command").setup()
-```
-
-或者也可以用建立連結的方式
-
+用以下的方式查詢nvim的runtimepath
 ```lua
 for _, path in  vim.split(vim.opt.runtimepath._value, ",") do
   print(path)
@@ -109,7 +98,6 @@ end
 -- ~/.local/share/nvim/site/pack/*/opt/{name}  👈 我們選這個來加
 -- /etc/xdg/nvim/pack/*/opt/{name}
 -- /usr/share/nvim/site/pack/*/opt/{name}
-
 ```
 
 
@@ -123,18 +111,9 @@ ln -siv   $(realpath ./nvim) ~/.local/share/nvim/site/pack/mine/opt/nvim_hs
 
 ```lua
 vim.cmd.packadd("nvim_hs") -- nvim/lua/nvim_hs.lua
-require("nvim_hs.command").setup()
+require("nvim_hs.command").setup() -- 對應: nvim/lua/nvim_hs/command.lua
 ```
 
-
----
-
-
-```sh
-# 底下樣加了之後，去跑 tests/test_hs_framework.lua 會失敗, 因為nvim_hs會抓錯人
-# ln -siv $(realpath ./nvim/lua/nvim_hs)     ~/.config/nvim/lua/nvim_hs
-# ln -siv $(realpath ./nvim/lua/nvim_hs.lua) ~/.config/nvim/lua/nvim_hs.lua # 讓 require("nvim_hs") 能有用
-```
 
 ---
 
@@ -164,7 +143,7 @@ local r3 = hs.run("foo.bar")
 :Hs system.list
 ```
 
-`:Hs` is only a thin frontend that calls `nvim_hs.run()`.
+`:Hs` is only a thin frontend that calls [nvim_hs.run()](https://github.com/CarsonSlovoka/nvim_hs/blob/b25185b5e03788b740709e2510aacfd9bd2cde84/nvim/lua/nvim_hs.lua#L14-L50)
 
 ---
 
