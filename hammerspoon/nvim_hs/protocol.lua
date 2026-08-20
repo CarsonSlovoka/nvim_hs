@@ -2,20 +2,23 @@
 --- Shared request / response protocol helpers for the Neovim ↔ Hammerspoon framework.
 --- Uses hs.json and hs.base64.
 
+---@diagnostic disable: undefined-global
+
 local M = {}
 
 M.VERSION = 1
+
 
 --- Encode a Lua table to a Base64 string of its JSON representation.
 --- @param tbl table
 --- @return string|nil b64
 --- @return string|nil err
 function M.encode(tbl)
-  local ok, json = pcall(hs.json.encode, tbl)
+  local ok, json = pcall(require("nvim_hs.encoding.json").encode, tbl)
   if not ok then
     return nil, "JSON encode failed: " .. tostring(json)
   end
-  local b64 = hs.base64.encode(json)
+  local b64 = require("nvim_hs.encoding.base64").encode(json)
   if not b64 then
     return nil, "Base64 encode failed"
   end
@@ -30,11 +33,11 @@ function M.decode(b64)
   if type(b64) ~= "string" or b64 == "" then
     return nil, "Empty or non-string Base64 input"
   end
-  local json = hs.base64.decode(b64)
+  local json = require("nvim_hs.encoding.base64").decode(b64)
   if not json then
     return nil, "Base64 decode failed"
   end
-  local ok, tbl = pcall(hs.json.decode, json)
+  local ok, tbl = pcall(require("nvim_hs.encoding.json").decode, json)
   if not ok then
     return nil, "JSON decode failed: " .. tostring(tbl)
   end

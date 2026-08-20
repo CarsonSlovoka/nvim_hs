@@ -4,9 +4,26 @@
 ---   hs.dofile("/path/to/repo/tests/test_hs_framework.lua")
 ---
 --- or evaluate the file contents.
+---
+--- nvim -u NONE -l test_hs_framework.lua
+--- nvim         -l test_hs_framework.lua
+
+local script_file = debug.getinfo(1, "S").source:sub(2)
+script_file = assert(vim.uv.fs_realpath(script_file))
+local git_root = vim.fn.fnamemodify(script_file, ":h:h:p")
+local hammerspoon_dir = vim.fs.joinpath(git_root, "hammerspoon")
+local module_paths = {
+  hammerspoon_dir .. "/?.lua",
+  hammerspoon_dir .. "/?/init.lua", -- require("nvim_hs") 時，只要前面package.path抓不到此nvim_hs.lua就會找nvim_hs/init.lua
+}
+-- vim.opt.runtimepath:prepend(hammerspoon_dir .. "/nvim_hs") -- runtimepath 會優先於package.path -- 但是這樣加也沒用因為底下目錄的結構不是lua/*
+package.path = table.concat(module_paths, ";") .. ";" .. package.path
+-- print(package.path)
+-- print(vim.inspect(vim.opt.runtimepath))
+
 
 local protocol = require("nvim_hs.protocol")
-local registry = require("nvim_hs.registry")
+local registry = require("nvim_hs.registry") -- ../hammerspoon/nvim_hs/registry.lua
 local dispatcher = require("nvim_hs.dispatcher")
 
 local failures = 0
@@ -29,8 +46,11 @@ local function assert_true(c, msg)
   end
 end
 
+
+require("nvim_hs.actions.system").register() -- ../hammerspoon/nvim_hs/actions/system.lua -- 註冊自定義的pint, list事件
+
 print("=== registry ===")
-local names = registry.list()
+local names = registry.list() -- 由於: require("nvim_hs.actions.system").register() 的關係，此時至少有2個項目
 assert_true(#names >= 2, "at least two actions registered")
 assert_true(registry.has("system.ping"), "system.ping is registered")
 assert_true(registry.has("system.list"), "system.list is registered")
@@ -74,13 +94,14 @@ print("=== full handle path ===")
 local nvim_hs = require("nvim_hs")
 local b64req = protocol.encode({ version = 1, action = "system.ping", payload = {} })
 local json_out = nvim_hs.handle(b64req)
-local final = hs.json.decode(json_out)
+local final = require("nvim_hs.encoding.json").decode(json_out)
 assert_eq(final.ok, true, "handle() returns ok response")
 assert_eq(final.data, "pong", "handle() data is pong")
 
 print("\n----")
 if failures == 0 then
-  print("All Hammerspoon framework tests passed.")
+  print("✅ All Hammerspoon framework tests passed.")
 else
-  print(string.format("%d test(s) failed.", failures))
+  io.stderr:write(string.format("\n%d test(s) failed.\n", failures))
+  vim.cmd.cquit(1)
 end

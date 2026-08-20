@@ -3,6 +3,8 @@
 --- Loads protocol, registry, dispatcher and built-in system actions.
 --- Exposes a single public function that the CLI calls with a Base64 request.
 
+-- hs.alert.show("init Hammerspoon nvim_hs", 3)
+
 local protocol = require("nvim_hs.protocol")
 local dispatcher = require("nvim_hs.dispatcher")
 local system = require("nvim_hs.actions.system")
@@ -20,14 +22,14 @@ function M.handle(b64)
   local req, err = protocol.decode(b64)
   if not req then
     local resp = protocol.err("DECODE_ERROR", err or "Failed to decode request")
-    return hs.json.encode(resp)
+    return require("nvim_hs.encoding.json").encode(resp)
   end
 
   local resp = dispatcher.dispatch(req)
-  local ok, json = pcall(hs.json.encode, resp)
+  local ok, json = pcall(require("nvim_hs.encoding.json").encode, resp)
   if not ok then
     local fallback = protocol.err("ENCODE_ERROR", "Failed to encode response: " .. tostring(json))
-    return hs.json.encode(fallback)
+    return require("nvim_hs.encoding.json").encode(fallback)
   end
   return json
 end

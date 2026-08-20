@@ -1,0 +1,4 @@
+這邊實際使用上是給hammerspoon用的，而hammerspoon沒有nvim相關的執行環境
+
+而為了也能使用nvim -l來跑測試，所以做兩者都可以相容
+

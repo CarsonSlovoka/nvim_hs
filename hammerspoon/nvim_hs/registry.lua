@@ -4,6 +4,8 @@
 
 local M = {}
 
+--- 全域的actions記錄
+---
 --- @type table<string, function>
 local actions = {}
 

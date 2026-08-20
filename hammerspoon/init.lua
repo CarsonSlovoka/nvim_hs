@@ -1,3 +1,5 @@
+--- 這只是一個範例，應該要把這些東西加入到: ~/.hammerspoon/init.lua 之中
+---
 --- Example Hammerspoon root init.lua for the nvim_hs framework.
 ---
 --- Usage options:
@@ -19,7 +21,7 @@ require("hs.ipc")
 --   .. ";/path/to/this/repo/hammerspoon/?.lua"
 --   .. ";/path/to/this/repo/hammerspoon/?/init.lua"
 
-local nvim_hs = require("nvim_hs")
+local nvim_hs = require("nvim_hs") -- 在hammerspoon下它還會找裡面的init.lua 即　~/.hammerspoon/nvim_hs/init.lua 對應於 ./nvim_hs/init.lua
 
 -- Optional: expose a global for quick interactive testing from the HS console.
 _G.nvim_hs = nvim_hs
