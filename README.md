@@ -38,66 +38,45 @@ All other domains (`app.*`, `window.*`, …) are intentionally deferred until th
 
 ## 2. Hammerspoon setup
 
-### 2.1 Install the `hs` CLI (once)
+### 2.1 取得: hammerspoon
 
-1. Open the Hammerspoon console.
-2. Run:
-
-```lua
-require("hs.ipc")
-hs.ipc.cliInstall()
+```sh
+brew install hammerspoon
 ```
 
-This installs the `hs` binary (normally into `/usr/local/bin`).
-Verify from a terminal:
-
-```bash
-which hs
-hs -c 'return "hello"'
-```
 
 ### 2.2 Load this project
 
-**Option A – copy / symlink into `~/.hammerspoon/`**
+
+```sh
+git clone https://github.com/CarsonSlovoka/nvim_hs ~/nvim_hs
+```
+
+
+可以用建立連結的方式來將對應的檔案放到 hammerspoon 下
 
 ```bash
-# example
-ln -s /path/to/this/repo/hammerspoon/nvim_hs ~/.hammerspoon/nvim_hs
+# example (看專案的位置clone到哪)
+ln -s ~/nvim_hs/hammerspoon/nvim_hs ~/.hammerspoon/nvim_hs
 
 # 或者
 ln -siv $(realpath ./hammerspoon/nvim_hs) ~/.hammerspoon/nvim_hs
 ```
 
-Then in `~/.hammerspoon/init.lua`:
+接著加入以下的內容到[~/.hammerspoon/init.lua](~/.hammerspoon/init.lua) 如果沒有這個檔案就新增它
 
-```lua
-require("hs.ipc") -- Inter-Process Communication
-local nvim_hs = require("nvim_hs")
-_G.nvim_hs = nvim_hs   -- optional, for console convenience
-```
+> [!IMPORTANT] 內容參考[init.lua](hammerspoon/init.lua)
 
-**Option B – keep the repo elsewhere and extend `package.path`**
+---
 
-```lua
--- ~/.hammerspoon/init.lua
-local repo = "/path/to/this/repo/hammerspoon"
-package.path = package.path
-  .. ";" .. repo .. "/?.lua"
-  .. ";" .. repo .. "/?/init.lua"
+完成之後，重新reload. (`hs.reload()`或者用UI介面來重啟都可以)
 
-require("hs.ipc")
-require("nvim_hs")
-```
-
-Reload Hammerspoon configuration (`hs.reload()` or the menu).
-
-You should see a log line similar to:
+成功後會在hammerspoon的console視窗看到以下的內容
 
 ```text
 [nvim_hs] framework loaded – actions: system.list, system.ping
 ```
 
----
 
 ## 3. Neovim setup
 

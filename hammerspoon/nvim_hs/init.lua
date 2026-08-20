@@ -7,7 +7,7 @@
 
 local protocol = require("nvim_hs.protocol")
 local dispatcher = require("nvim_hs.dispatcher")
-local system = require("nvim_hs.actions.system")
+local system = require("nvim_hs.actions.system") -- 這邊註冊了自定義的事件
 
 -- Register built-in actions once at load time.
 system.register()
@@ -25,6 +25,7 @@ function M.handle(b64)
     return require("nvim_hs.encoding.json").encode(resp)
   end
 
+  -- decode => 從registry依decode的action找到所要執行的handler 代入payload後來執行
   local resp = dispatcher.dispatch(req)
   local ok, json = pcall(require("nvim_hs.encoding.json").encode, resp)
   if not ok then

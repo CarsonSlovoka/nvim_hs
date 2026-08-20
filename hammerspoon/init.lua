@@ -21,7 +21,11 @@ require("hs.ipc")
 --   .. ";/path/to/this/repo/hammerspoon/?.lua"
 --   .. ";/path/to/this/repo/hammerspoon/?/init.lua"
 
-local nvim_hs = require("nvim_hs") -- 在hammerspoon下它還會找裡面的init.lua 即　~/.hammerspoon/nvim_hs/init.lua 對應於 ./nvim_hs/init.lua
+
+-- hammerspoon 它有加入 package.path = ~/.hammerspoon/?/init.lua .. package.path 所以當 reqire("nvim_hs")時，會找 ~/.hammerspoon/nvim_hs/init.lua 也就是此檔案: ./nvim_hs/init.lua
+local nvim_hs = require("nvim_hs") -- 載入: ./nvim_hs/init.lua
+
+-- require("nvim_hs.registry").register(name, handler) -- Tip: 也能自己再新增想要的事件處理
 
 -- Optional: expose a global for quick interactive testing from the HS console.
 _G.nvim_hs = nvim_hs

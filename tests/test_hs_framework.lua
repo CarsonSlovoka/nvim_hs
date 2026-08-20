@@ -49,7 +49,8 @@ local function assert_true(c, msg)
 end
 
 
-require("nvim_hs.actions.system").register() -- ../hammerspoon/nvim_hs/actions/system.lua -- 註冊自定義的pint, list事件
+-- require("nvim_hs.actions.system").register() -- ../hammerspoon/nvim_hs/actions/system.lua -- 註冊自定義的pint, list事件
+local nvim_hs = require("nvim_hs") -- 可以直接找 ../hammerspoon/nvim_hs/init.lua 來初始化. 包含了事件的定義
 
 print("=== registry ===")
 local names = registry.list() -- 由於: require("nvim_hs.actions.system").register() 的關係，此時至少有2個項目
@@ -93,7 +94,6 @@ end
 assert_true(found_ping and found_list, "list contains system.ping and system.list")
 
 print("=== full handle path ===")
-local nvim_hs = require("nvim_hs")
 local b64req = protocol.encode({ version = 1, action = "system.ping", payload = {} })
 local json_out = nvim_hs.handle(b64req)
 local final = require("nvim_hs.encoding.json").decode(json_out)
