@@ -13,6 +13,10 @@ local system = require("nvim_hs.actions.system") -- 這邊註冊了自定義的�
 system.register()
 require("nvim_hs.actions.audiodevice").register()
 
+local window = require("nvim_hs.actions.window")
+window.register()
+window.setup_hotkeys() -- Cmd+Option+1-9 mark, Cmd+1-9 focus
+
 local M = {}
 
 --- Handle a Base64-encoded request string coming from `hs -c`.

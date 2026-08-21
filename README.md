@@ -53,12 +53,17 @@ return string.format(
 │       ├── protocol.lua          # JSON ↔ Base64 encode/decode, ok/err helpers
 │       ├── registry.lua          # action name → handler (source of truth)
 │       ├── dispatcher.lua        # request → lookup → call → response
+│       ├── encoding/
+│       │   ├── json.lua
+│       │   └── base64.lua
 │       └── actions/
-│           └── system.lua        # system.ping / system.list
+│           ├── system.lua        # system.ping / system.list
+│           ├── audiodevice.lua   # audiodevice.set_volume
+│           └── window.lua        # window marks (slots 1-9) + hotkeys
 └── nvim/                         # Neovim side (Lua plugin)
     └── lua/
+        ├── nvim_hs.lua           # Public API: require("nvim_hs").run(...)
         └── nvim_hs/
-            ├── init.lua          # Public API: require("nvim_hs").run(...)
             ├── transport.lua     # ONLY module that knows about `hs -c`
             ├── protocol.lua      # Request encoding + response decoding
             └── command.lua       # :Hs user-command frontend
@@ -104,7 +109,7 @@ ln -siv $(realpath ./hammerspoon/nvim_hs) ~/.hammerspoon/nvim_hs
 成功後會在hammerspoon的console視窗看到以下的內容
 
 ```text
-[nvim_hs] framework loaded – actions: system.list, system.ping
+[nvim_hs] framework loaded – actions: audiodevice.set_volume, system.list, system.ping, window.clear_slot, window.focus_slot, window.list_marks, window.mark
 ```
 
 
@@ -185,7 +190,46 @@ print(vim.inspect(require("nvim_hs").run('audiodevice.set_volume', { value=30 })
 
 ---
 
-## 5. Protocol
+## 5. Window Marks（視窗標記槽）
+
+類似世紀帝國的部隊編隊，可把目前 focused 的視窗標記到 1~9 號槽，之後快速切換。
+
+### 熱鍵（Hammerspoon 全域）
+
+| 熱鍵 | 行為 |
+|------|------|
+| `Cmd + Option + 1` ~ `9` | 把目前 focused 視窗標記到對應 slot |
+| `Cmd + 1` ~ `9` | 切換到該 slot 的視窗 |
+
+- 標記成功：畫面中央會出現短提示
+- 切換成功：**不顯示**提示（乾淨）
+- 該 slot 是空的：顯示「Slot N is empty」
+- 被標記的視窗被關掉時，該 slot 會自動清除
+- **不持久化**（Hammerspoon reload 後清空）
+
+### 對應的 nvim_hs actions
+
+```vim
+:Hs window.mark {"slot":3}
+:Hs window.focus_slot {"slot":3}
+:Hs window.list_marks
+:Hs window.clear_slot {"slot":3}
+```
+
+或在 Lua 中：
+
+```lua
+local hs = require("nvim_hs")
+
+hs.run("window.mark", { slot = 3 })
+hs.run("window.focus_slot", { slot = 3 })
+hs.run("window.list_marks")
+-- → { ok = true, data = { { slot = 3, window = { id=..., title=..., app=... } }, ... } }
+```
+
+---
+
+## 6. Protocol
 
 ### Request (Neovim → Hammerspoon)
 
@@ -245,7 +289,7 @@ Common error codes:
 
 ---
 
-## 6. Testing the full round-trip (manual)
+## 7. Testing the full round-trip (manual)
 
 1. Make sure Hammerspoon is running and the framework is loaded (see §2).
 2. Open Neovim with the plugin on `rtp`.
@@ -283,7 +327,7 @@ or the `vim.inspect` equivalent.
 
 ---
 
-## 7. Automated / unit tests
+## 8. Automated / unit tests
 
 ### Neovim-side protocol tests
 
@@ -302,7 +346,7 @@ These cover:
 
 ---
 
-## 8. Common troubleshooting
+## 9. Common troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
@@ -314,7 +358,7 @@ These cover:
 
 ---
 
-## 9. Architecture summary (v1)
+## 10. Architecture summary (v1)
 
 ```text
 Neovim
