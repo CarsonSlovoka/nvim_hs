@@ -19,7 +19,7 @@ end
 --- @param _payload table
 --- @return string[]
 function M.list(_payload)
-  return registry.list()
+  return registry.list() -- `git show -p 6aab5cc3:hammerspoon/nvim_hs/registry.lua | bat -l lua -P -r 9:10 -r 32:41`
 end
 
 --- Register all system actions into the registry.

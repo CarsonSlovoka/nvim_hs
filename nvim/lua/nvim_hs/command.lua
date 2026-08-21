@@ -1,9 +1,67 @@
 --- nvim_hs.command
 --- Defines the :Hs user command.  It is only a frontend to nvim_hs.run().
+---
+--- Completion is dynamic: it calls system.list from Hammerspoon (the single
+--- source of truth) and caches the result according to config.
 
 local nvim_hs = require("nvim_hs") -- ../nvim_hs.lua
 
 local M = {}
+
+--- @class nvim_hs.command.Config
+--- @field completion_cache_ttl integer|nil cache time to live
+---   nil  → fetch once, then cache forever (until Neovim restart or refresh)
+---   N    → re-fetch after N seconds (no upper limit)
+
+--- Default config
+local default_config = {
+  completion_cache_ttl = nil, -- forever after first fetch
+}
+
+--- Current config (set by setup)
+M.config = vim.deepcopy(default_config)
+
+-- Cache for action list
+local cache = {
+  list = nil, ---@type string[]|nil
+  fetched_at = 0, ---@type integer  os.time()
+}
+
+--- Force the next completion to re-fetch from Hammerspoon.
+function M.refresh_completions()
+  cache.list = nil
+  cache.fetched_at = 0
+end
+
+--- Get the list of actions, using cache according to config.
+--- 動態呼叫registry.list()取得所有可用的action: `git show -p d632304b:hammerspoon/nvim_hs/actions/system.lua | bat -l lua -P -r 16:23`
+---
+--- @return string[]
+local function get_action_list()
+  local ttl = M.config.completion_cache_ttl
+  local now = os.time()
+
+  if cache.list then
+    if ttl == nil then
+      -- forever
+      return cache.list
+    end
+    if (now - cache.fetched_at) < ttl then
+      return cache.list
+    end
+  end
+
+  -- Fetch from Hammerspoon (source of truth)
+  local resp = nvim_hs.run("system.list")
+  if resp.ok and type(resp.data) == "table" then
+    cache.list = resp.data
+    cache.fetched_at = now
+    return cache.list
+  end
+
+  -- Fetch failed: keep old cache if present, otherwise empty
+  return cache.list or {}
+end
 
 --- Parse the argument string of :Hs into action + optional JSON payload.
 --- First token is the action name; the rest (if any) is treated as JSON payload.
@@ -64,9 +122,13 @@ local function print_response(resp)
 end
 
 --- Create the :Hs command.
-function M.setup()
-  vim.api.nvim_create_user_command("Hs", function(opts)
-    local action, payload, err = parse_args(opts.args)
+--- @param opts nvim_hs.command.Config|nil
+function M.setup(opts)
+  opts = opts or {}
+  M.config = vim.tbl_deep_extend("force", default_config, opts)
+
+  vim.api.nvim_create_user_command("Hs", function(cmd_opts)
+    local action, payload, err = parse_args(cmd_opts.args)
     if err then
       vim.notify("[nvim_hs] " .. err, vim.log.levels.ERROR)
       return
@@ -77,16 +139,20 @@ function M.setup()
   end, {
     nargs = "+",
     desc = "Run a Hammerspoon action via nvim_hs (e.g. :Hs system.ping)",
-    complete = function(arg_lead)
-      -- Future: could call system.list for completion, but keep minimal for v1
-      local cmp_list = {
-        -- 這邊能傳什麼，還是要看hammerspoon定義了什麼: `git show -p d632304b:hammerspoon/nvim_hs/actions/system.lua | bat -l lua -P -r 26:29`
-        -- ../../../hammerspoon/nvim_hs/actions/
-        "system.ping",
-        "system.list",
-        "audiodevice.set_volume",
-      }
-      return #arg_lead > 0 and vim.fn.matchfuzzy(cmp_list, arg_lead) or cmp_list
+    complete = function(arg_lead, cmd_line, _)
+      -- Only complete the action name (first token).
+      -- If the user has already typed a space after the action, do not offer
+      -- action names again (they are typing the JSON payload).
+      local after = cmd_line:match("^%s*Hs%s+(.*)$") or ""
+      if after:find("%s") then
+        return {}
+      end
+
+      local list = get_action_list()
+      if #arg_lead == 0 then
+        return list
+      end
+      return vim.fn.matchfuzzy(list, arg_lead)
     end,
   })
 end

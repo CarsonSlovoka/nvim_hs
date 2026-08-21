@@ -146,7 +146,23 @@ ln -siv   $(realpath ./nvim) ~/.local/share/nvim/site/pack/mine/opt/nvim_hs
 
 ```lua
 vim.cmd.packadd("nvim_hs") -- nvim/lua/nvim_hs.lua
-require("nvim_hs.command").setup() -- 對應: nvim/lua/nvim_hs/command.lua
+
+-- 基本用法（completion cache 預設為 nil = 只抓一次後永久快取）
+require("nvim_hs.command").setup()
+
+-- 或指定 cache TTL（秒）
+-- require("nvim_hs.command").setup({
+--   completion_cache_ttl = 30,  -- 30 秒後重新向 Hammerspoon 查詢
+--   -- completion_cache_ttl = nil,  -- 只抓一次，之後永遠用 cache（預設）
+-- })
+```
+
+`:Hs` 的補全會動態呼叫 `system.list`（Hammerspoon registry 是唯一真相來源），不再 hardcode
+
+若你新增了 action 並 reload 了 Hammerspoon，但 Neovim 還在用舊 cache，可手動清除：
+
+```lua
+require("nvim_hs.command").refresh_completions()
 ```
 
 
