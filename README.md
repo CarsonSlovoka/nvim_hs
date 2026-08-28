@@ -59,14 +59,15 @@ return string.format(
 │       └── actions/
 │           ├── system.lua        # system.ping / system.list
 │           ├── audiodevice.lua   # audiodevice.set_volume
-│           └── window.lua        # window marks (slots 1-9) + hotkeys
+│           └── window.lua        # window marks + snapshot/apply + hotkeys
 └── nvim/                         # Neovim side (Lua plugin)
     └── lua/
         ├── nvim_hs.lua           # Public API: require("nvim_hs").run(...)
         └── nvim_hs/
             ├── transport.lua     # ONLY module that knows about `hs -c`
             ├── protocol.lua      # Request encoding + response decoding
-            └── command.lua       # :Hs user-command frontend
+            ├── command.lua       # :Hs user-command frontend
+            └── marks_buffer.lua  # :HsMarks scratch buffer
 ```
 
 ---
@@ -246,6 +247,7 @@ Slot 的 source of truth 是 Hammerspoon 端的 `SLOT_ORDER`（`"1"`..`"9"` 然�
 :Hs window.focus_slot {"slot":"a"}
 :Hs window.list_marks
 :Hs window.clear_slot {"slot":"a"}
+:Hs window.snapshot
 ```
 
 或在 Lua 中：
@@ -259,6 +261,54 @@ hs.run("window.focus_slot", { slot = "a" })
 hs.run("window.list_marks")
 -- → { ok = true, data = { { slot = "3", window = { ... } }, { slot = "a", window = { ... } }, ... } }
 ```
+
+### 用 Neovim buffer 批次編鍵
+
+`require("nvim_hs.command").setup()` 會一併註冊 `:HsMarks`。
+
+```vim
+:HsMarks
+```
+
+會開一個 scratch buffer（快照），例如：
+
+```text
+# slot<TAB>id<TAB>app<TAB>title
+# slot = 1-9 / a-z to assign,  -  to leave unmarked.
+# Delete a line to unmark.  Duplicate slot or id is rejected.
+# :w applies the whole buffer.  :HsMarks refreshes the snapshot.
+#
+a	12345	Safari	GitHub
+3	67890	Code	window.lua
+-	11111	Finder	Downloads
+```
+
+編輯規則：
+
+- 改第一欄：換槽（`a` → `s`）
+- 改成 `-` 或刪掉該行：取消標記
+- 未編的行把 `-` 改成 `a`：新編
+- 同一個 slot 或同一個 id 出現兩次：整批拒絕，marks 不會被改到一半
+- 套用時視窗已關掉：該行 skip，其餘照套
+- `id` 是身份，不要改；`app` / `title` 只是給人看的
+
+```vim
+:w          " 把整張表套用到 Hammerspoon
+:HsMarks    " 重新拉 snapshot（編到一半視窗有開關時用）
+```
+
+Buffer 文字只在 Neovim 解析。送給 Hammerspoon 的是：
+
+```json
+{
+  "items": [
+    { "slot": "a", "id": 12345 },
+    { "slot": "3", "id": 67890 }
+  ]
+}
+```
+
+熱鍵日常切換仍可用；這張表負責批次重排
 
 ---
 
@@ -366,6 +416,7 @@ or the `vim.inspect` equivalent.
 
 ```sh
 nvim -l tests/test_hs_framework.lua
+nvim -l tests/test_marks_buffer.lua
 ```
 
 These cover:

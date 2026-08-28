@@ -100,6 +100,37 @@ local final = require("nvim_hs.encoding.json").decode(json_out)
 assert_eq(final.ok, true, "handle() returns ok response")
 assert_eq(final.data, "pong", "handle() data is pong")
 
+print("=== window.apply_marks validation ===")
+assert_true(registry.has("window.snapshot"), "window.snapshot is registered")
+assert_true(registry.has("window.apply_marks"), "window.apply_marks is registered")
+
+local dup_slot = dispatcher.dispatch({
+  version = 1,
+  action = "window.apply_marks",
+  payload = {
+    items = {
+      { slot = "a", id = 1 },
+      { slot = "a", id = 2 },
+    },
+  },
+})
+assert_eq(dup_slot.ok, false, "duplicate slot → not ok")
+assert_eq(dup_slot.error.code, "HANDLER_ERROR", "duplicate slot → HANDLER_ERROR")
+assert_true(tostring(dup_slot.error.message):find("DUPLICATE_SLOT", 1, true) ~= nil, "duplicate slot message")
+
+local dup_id = dispatcher.dispatch({
+  version = 1,
+  action = "window.apply_marks",
+  payload = {
+    items = {
+      { slot = "a", id = 1 },
+      { slot = "b", id = 1 },
+    },
+  },
+})
+assert_eq(dup_id.ok, false, "duplicate id → not ok")
+assert_true(tostring(dup_id.error.message):find("DUPLICATE_ID", 1, true) ~= nil, "duplicate id message")
+
 print("\n----")
 if failures == 0 then
   print("✅ All Hammerspoon framework tests passed.")

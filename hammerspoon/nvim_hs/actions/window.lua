@@ -13,6 +13,8 @@
 ---   window.focus_slot  { slot = ... }
 ---   window.list_marks
 ---   window.clear_slot  { slot = ... }
+---   window.snapshot
+---   window.apply_marks { items = { { slot = ..., id = ... }, ... } }
 
 local registry = require("nvim_hs.registry")
 
@@ -211,12 +213,165 @@ function M.clear_slot(payload)
   return { slot = slot, cleared = true }
 end
 
+local function slot_for_window_id(win_id)
+  for slot, entry in pairs(marks) do
+    if entry and entry.id == win_id and is_valid(entry) then
+      return slot
+    end
+  end
+  return nil
+end
+
+local function collect_windows()
+  local seen = {}
+  local list = {}
+
+  local function add(win)
+    local info = window_info(win)
+    if not info or seen[info.id] then
+      return
+    end
+    seen[info.id] = true
+    list[#list + 1] = {
+      id = info.id,
+      slot = slot_for_window_id(info.id),
+      app = info.app,
+      title = info.title,
+      bundle = info.bundle,
+    }
+  end
+
+  if hs.window and hs.window.allWindows then
+    for _, win in ipairs(hs.window.allWindows() or {}) do
+      add(win)
+    end
+  end
+
+  -- Keep marked windows even if allWindows() missed them (other Space / hidden).
+  for _, entry in pairs(marks) do
+    local win = resolve_window(entry)
+    if win then
+      add(win)
+    end
+  end
+
+  table.sort(list, function(a, b)
+    local ia, ib = a.slot and SLOT_SET[a.slot] and a.slot or nil, b.slot and SLOT_SET[b.slot] and b.slot or nil
+    if ia and not ib then
+      return true
+    end
+    if ib and not ia then
+      return false
+    end
+    if ia and ib then
+      return ia < ib
+    end
+    if a.app ~= b.app then
+      return a.app < b.app
+    end
+    return a.title < b.title
+  end)
+
+  return list
+end
+
+--- Snapshot every known window plus its current mark (if any).
+--- Unmarked windows have slot = nil.  Other-Space windows may be missing.
+--- @param _payload table
+--- @return table
+function M.snapshot(_payload)
+  return { windows = collect_windows() }
+end
+
+local function normalize_window_id(id)
+  if type(id) == "number" and id == math.floor(id) and id > 0 then
+    return id
+  end
+  if type(id) == "string" and id:match("^%d+$") then
+    return tonumber(id)
+  end
+  return nil
+end
+
+--- Replace the entire marks table with payload.items.
+--- Duplicate slot or duplicate window id rejects the whole apply.
+--- Missing windows are skipped; the rest are applied.
+--- @param payload table  { items = { { slot = "a", id = 123 }, ... } }
+--- @return table
+function M.apply_marks(payload)
+  local items = payload and payload.items
+  if type(items) ~= "table" then
+    error("items must be a list of { slot, id }")
+  end
+
+  local by_slot = {}
+  local by_id = {}
+  local planned = {}
+
+  for i, item in ipairs(items) do
+    if type(item) ~= "table" then
+      error("items[" .. i .. "] must be a table")
+    end
+    local slot = get_slot(item)
+    local id = normalize_window_id(item.id)
+    if not id then
+      error("items[" .. i .. "].id must be a window id")
+    end
+    if by_slot[slot] then
+      error("DUPLICATE_SLOT: slot " .. slot .. " assigned more than once")
+    end
+    if by_id[id] then
+      error("DUPLICATE_ID: window id " .. tostring(id) .. " assigned to more than one slot")
+    end
+    by_slot[slot] = true
+    by_id[id] = true
+    planned[#planned + 1] = { slot = slot, id = id }
+  end
+
+  local new_marks = {}
+  local applied = {}
+  local skipped = {}
+
+  for _, p in ipairs(planned) do
+    local win = hs.window and hs.window.get and hs.window.get(p.id) or nil
+    local info = window_info(win)
+    if not info or info.id ~= p.id then
+      skipped[#skipped + 1] = {
+        slot = p.slot,
+        id = p.id,
+        reason = "WINDOW_NOT_FOUND",
+      }
+    else
+      new_marks[p.slot] = { win = win, id = p.id }
+      applied[#applied + 1] = {
+        slot = p.slot,
+        window = info,
+      }
+    end
+  end
+
+  -- 以下這邊是真正的影響, marks是一個外層的變數, 當熱鍵觸發(focus_slot)時，是以marks的變數為準
+  for slot in pairs(marks) do
+    marks[slot] = nil
+  end
+  for slot, entry in pairs(new_marks) do
+    marks[slot] = entry
+  end
+
+  return {
+    applied = applied,
+    skipped = skipped,
+  }
+end
+
 --- Register all window actions into the registry.
 function M.register()
   registry.register("window.mark", M.mark)
   registry.register("window.focus_slot", M.focus_slot)
   registry.register("window.list_marks", M.list_marks)
   registry.register("window.clear_slot", M.clear_slot)
+  registry.register("window.snapshot", M.snapshot)
+  registry.register("window.apply_marks", M.apply_marks)
 end
 
 -- Modal is only armed after Cmd+F2.  Inner chords therefore cannot collide

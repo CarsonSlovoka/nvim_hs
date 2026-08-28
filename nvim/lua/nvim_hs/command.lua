@@ -127,6 +127,8 @@ function M.setup(opts)
   opts = opts or {}
   M.config = vim.tbl_deep_extend("force", default_config, opts)
 
+  require("nvim_hs.marks_buffer").setup()
+
   vim.api.nvim_create_user_command("Hs", function(cmd_opts)
     local action, payload, err = parse_args(cmd_opts.args)
     if err then
