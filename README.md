@@ -264,7 +264,7 @@ hs.run("window.list_marks")
 
 ### 用 Neovim buffer 批次編鍵
 
-`require("nvim_hs.command").setup()` 會一併註冊 `:HsMarks`。
+`require("nvim_hs.command").setup()` 會一併註冊 `:HsMarks`
 
 ```vim
 :HsMarks
@@ -282,6 +282,8 @@ a	12345	Safari	GitHub
 3	67890	Code	window.lua
 -	11111	Finder	Downloads
 ```
+
+> [!NOTE] 沒有任何 slot 時，視窗列第一欄會是 `-`，改成 `a` / `3` 再 `:w` 即可
 
 編輯規則：
 

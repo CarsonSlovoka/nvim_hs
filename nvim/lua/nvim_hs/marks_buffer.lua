@@ -30,7 +30,7 @@ function M.format_snapshot(windows)
   local lines = vim.deepcopy(HEADER)
   for _, win in ipairs(windows or {}) do
     local slot = win.slot
-    if type(slot) ~= "string" or slot == "" then
+    if slot == vim.NIL or type(slot) ~= "string" or slot == "" then
       slot = "-"
     end
     lines[#lines + 1] = table.concat({
@@ -147,19 +147,56 @@ function M.apply_buf(buf)
   return resp.ok == true
 end
 
+local function windows_from_snapshot(data)
+  if type(data) ~= "table" then
+    return {}
+  end
+  local raw = data.windows
+  if type(raw) ~= "table" then
+    -- Tolerate a bare list in case an older handler shape comes back.
+    if data[1] ~= nil then
+      raw = data
+    else
+      return {}
+    end
+  end
+  if raw[1] ~= nil then
+    return raw
+  end
+  local list = {}
+  for _, win in pairs(raw) do
+    if type(win) == "table" and win.id ~= nil then
+      list[#list + 1] = win
+    end
+  end
+  return list
+end
+
 local function write_snapshot(buf)
   local resp = nvim_hs.run("window.snapshot") -- 呼叫hs來通知其要做snapshot
+  local lines
   if not resp.ok then
     local err = resp.error or {}
-    vim.notify(
-      string.format("[nvim_hs] %s: %s", err.code or "ERROR", err.message or "snapshot failed"),
-      vim.log.levels.ERROR
-    )
+    local code = err.code or "ERROR"
+    local message = err.message or "snapshot failed"
+    vim.notify(string.format("[nvim_hs] %s: %s", code, message), vim.log.levels.ERROR)
+    lines = vim.deepcopy(HEADER)
+    lines[#lines + 1] = string.format("# snapshot failed: %s: %s", code, message)
+    if code == "ACTION_NOT_FOUND" then
+      lines[#lines + 1] = "# Reload Hammerspoon so window.snapshot is registered, then run :HsMarks again."
+    end
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modified = false
     return false
   end
+
   -- 將從hs得到的結果，寫回到buffer之中
-  local windows = resp.data and resp.data.windows or {}
-  local lines = M.format_snapshot(windows)
+  local windows = windows_from_snapshot(resp.data)
+  lines = M.format_snapshot(windows)
+  if #windows == 0 then
+    lines[#lines + 1] = "# No windows returned. Marks are optional; you can still assign slots after a refresh."
+    lines[#lines + 1] = "# If this keeps happening: Reload Hammerspoon and grant Accessibility to Hammerspoon."
+  end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modified = false
   return true

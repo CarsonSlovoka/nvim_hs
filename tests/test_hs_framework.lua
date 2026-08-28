@@ -100,9 +100,15 @@ local final = require("nvim_hs.encoding.json").decode(json_out)
 assert_eq(final.ok, true, "handle() returns ok response")
 assert_eq(final.data, "pong", "handle() data is pong")
 
-print("=== window.apply_marks validation ===")
+print("=== window.snapshot without marks ===")
 assert_true(registry.has("window.snapshot"), "window.snapshot is registered")
 assert_true(registry.has("window.apply_marks"), "window.apply_marks is registered")
+local snap = dispatcher.dispatch({ version = 1, action = "window.snapshot", payload = {} })
+assert_eq(snap.ok, true, "snapshot succeeds with empty marks")
+assert_true(type(snap.data) == "table", "snapshot data is table")
+assert_true(type(snap.data.windows) == "table", "snapshot.windows is table")
+
+print("=== window.apply_marks validation ===")
 
 local dup_slot = dispatcher.dispatch({
   version = 1,

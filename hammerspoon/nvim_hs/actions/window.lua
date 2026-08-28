@@ -65,6 +65,18 @@ local function get_slot(payload)
   error("slot must be 1-9 or a-z")
 end
 
+local function json_safe_string(s)
+  s = tostring(s or "")
+  s = s:gsub("[\0-\8\11\12\14-\31]", " ")
+  if hs and hs.utf8 and hs.utf8.fixUTF8 then
+    local ok, fixed = pcall(hs.utf8.fixUTF8, s, "?")
+    if ok and type(fixed) == "string" then
+      s = fixed
+    end
+  end
+  return s
+end
+
 local function window_info(win)
   if not win then
     return nil
@@ -75,12 +87,26 @@ local function window_info(win)
   if not ok or id == nil then
     return nil
   end
-  local app = win:application()
+
+  local title = ""
+  pcall(function()
+    title = win:title() or ""
+  end)
+
+  local app_name, bundle = "", ""
+  pcall(function()
+    local app = win:application()
+    if app then
+      app_name = app:name() or ""
+      bundle = app:bundleID() or ""
+    end
+  end)
+
   return {
     id = id,
-    title = win:title() or "",
-    app = app and app:name() or "",
-    bundle = app and app:bundleID() or "",
+    title = json_safe_string(title),
+    app = json_safe_string(app_name),
+    bundle = json_safe_string(bundle),
   }
 end
 
@@ -222,32 +248,61 @@ local function slot_for_window_id(win_id)
   return nil
 end
 
+local function each_window_source(add)
+  if not (hs and hs.window) then
+    return
+  end
+
+  local function add_list(ok, result)
+    if not ok or result == nil then
+      return
+    end
+    if type(result) ~= "table" then
+      add(result)
+      return
+    end
+    for _, win in ipairs(result) do
+      add(win)
+    end
+  end
+
+  add_list(pcall(function()
+    return hs.window.focusedWindow()
+  end))
+  add_list(pcall(function()
+    return hs.window.visibleWindows()
+  end))
+  add_list(pcall(function()
+    return hs.window.minimizedWindows()
+  end))
+  add_list(pcall(function()
+    return hs.window.allWindows()
+  end))
+end
+
 local function collect_windows()
   local seen = {}
   local list = {}
 
   local function add(win)
-    local info = window_info(win)
-    if not info or seen[info.id] then
+    local ok, info = pcall(window_info, win)
+    if not ok or not info or seen[info.id] then
       return
     end
     seen[info.id] = true
+    -- Always emit `slot` as a string so JSON encode never sees nil values.
     list[#list + 1] = {
       id = info.id,
-      slot = slot_for_window_id(info.id),
-      app = info.app,
-      title = info.title,
-      bundle = info.bundle,
+      slot = slot_for_window_id(info.id) or "",
+      app = info.app or "",
+      title = info.title or "",
+      bundle = info.bundle or "",
     }
   end
 
-  if hs.window and hs.window.allWindows then
-    for _, win in ipairs(hs.window.allWindows() or {}) do
-      add(win)
-    end
-  end
+  each_window_source(add)
 
-  -- Keep marked windows even if allWindows() missed them (other Space / hidden).
+  -- Keep marked windows even if the system enumerators missed them.
   for _, entry in pairs(marks) do
     local win = resolve_window(entry)
     if win then
@@ -256,7 +311,8 @@ local function collect_windows()
   end
 
   table.sort(list, function(a, b)
-    local ia, ib = a.slot and SLOT_SET[a.slot] and a.slot or nil, b.slot and SLOT_SET[b.slot] and b.slot or nil
+    local ia = (a.slot ~= "" and SLOT_SET[a.slot]) and a.slot or nil
+    local ib = (b.slot ~= "" and SLOT_SET[b.slot]) and b.slot or nil
     if ia and not ib then
       return true
     end
@@ -266,10 +322,11 @@ local function collect_windows()
     if ia and ib then
       return ia < ib
     end
-    if a.app ~= b.app then
-      return a.app < b.app
+    local app_a, app_b = tostring(a.app or ""), tostring(b.app or "")
+    if app_a ~= app_b then
+      return app_a < app_b
     end
-    return a.title < b.title
+    return tostring(a.title or "") < tostring(b.title or "")
   end)
 
   return list

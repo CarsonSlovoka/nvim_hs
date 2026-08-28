@@ -37,6 +37,16 @@ local joined = table.concat(lines, "\n")
 assert_true(joined:find("a\t11\tSafari\tGitHub", 1, true) ~= nil, "assigned row uses tabs")
 assert_true(joined:find("-\t22\tFinder\tDownloads", 1, true) ~= nil, "unmarked row uses '-'")
 
+print("=== format empty snapshot ===")
+local empty_lines = marks_buffer.format_snapshot({
+  { slot = "", id = 33, app = "WezTerm", title = "nvim" },
+})
+assert_true(table.concat(empty_lines, "\n"):find("-\t33\tWezTerm\tnvim", 1, true) ~= nil, "empty slot string is unmarked")
+local header_only = marks_buffer.format_snapshot({})
+local items_empty, err_empty = marks_buffer.parse_buffer_lines(header_only)
+assert_true(err_empty == nil, "header-only snapshot parses")
+assert_eq(#items_empty, 0, "header-only snapshot yields no items")
+
 print("=== parse assigned + unmarked + comments ===")
 local items, err = marks_buffer.parse_buffer_lines({
   "# comment",

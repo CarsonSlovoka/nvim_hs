@@ -51,6 +51,16 @@ assert_eq(resp2 and resp2.data, "pong", "decode tolerates trailing newline")
 local bad, berr = protocol.decode_response("{not json")
 assert_true(bad == nil and berr ~= nil, "decode_response rejects invalid JSON")
 
+-- hs.json.encode nil leaked through the CLI as the literal "nil"
+local nil_resp, nil_err = protocol.decode_response("nil")
+assert_true(nil_resp == nil and nil_err ~= nil, "decode_response rejects literal nil")
+assert_true(tostring(nil_err):find("nil", 1, true) ~= nil, "nil error mentions encode failure")
+
+-- print() prefix before JSON object
+local prefixed, perr = protocol.decode_response("debug 123\n" .. good)
+assert_true(prefixed ~= nil and perr == nil, "decode_response skips leading junk")
+assert_eq(prefixed.data, "pong", "prefixed JSON still decodes")
+
 -- error constructor
 local e = protocol.err("TEST_CODE", "test message")
 assert_eq(e.ok, false, "err().ok == false")
@@ -59,7 +69,7 @@ assert_eq(e.error.message, "test message", "err().error.message")
 
 print("\n----")
 if failures == 0 then
-  print("All protocol tests passed.")
+  print("✅ All protocol tests passed.")
 else
   print(string.format("%d test(s) failed.", failures))
 end
