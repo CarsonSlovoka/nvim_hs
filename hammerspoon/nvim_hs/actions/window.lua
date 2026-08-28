@@ -104,26 +104,82 @@ function M.mark(payload)
   }
 end
 
+--- Restore a minimized / hidden window far enough that :focus() can work.
+--- Official docs: hs.window:focus() does not unminimize.
+local function reveal_and_focus(win)
+  local app = win:application()
+  if app then
+    local hidden = false
+    pcall(function()
+      hidden = app:isHidden()
+    end)
+    if hidden then
+      app:unhide()
+    end
+  end
+
+  local minimized = false
+  pcall(function()
+    minimized = win:isMinimized()
+  end)
+  if minimized then
+    win:unminimize()
+  end
+
+  pcall(function()
+    win:becomeMain()
+  end)
+  pcall(function()
+    win:raise()
+  end)
+  win:focus()
+end
+
+--- Re-resolve the stored window.  The userdata can go stale while the
+--- window id is still valid (common after hide / minimize / Space change).
+local function resolve_window(entry)
+  if is_valid(entry) then
+    return entry.win
+  end
+  if not entry or not entry.id or not hs.window or not hs.window.get then
+    return nil
+  end
+  local win = hs.window.get(entry.id)
+  if not win then
+    return nil
+  end
+  local ok, id = pcall(function()
+    return win:id()
+  end)
+  if not ok or id ~= entry.id then
+    return nil
+  end
+  entry.win = win
+  return win
+end
+
 --- Focus the window stored in the given slot.
 --- Shows an alert only when the slot is empty.
 --- Success is silent (per design).
+--- Minimized windows are unminimized; hidden apps (Cmd+H) are unhidden first.
 --- @param payload table  { slot = "1".."9"|"a".."z"|1..9 }
 --- @return table
 function M.focus_slot(payload)
   local slot = get_slot(payload)
   local entry = marks[slot]
+  local win = resolve_window(entry)
 
-  if not is_valid(entry) then
+  if not win then
     marks[slot] = nil
     hs.alert.show(string.format("Slot %s is empty", slot), 1.0)
     error("Slot " .. slot .. " is empty")
   end
 
-  entry.win:focus()
+  reveal_and_focus(win)
 
   return {
     slot = slot,
-    window = window_info(entry.win),
+    window = window_info(win),
   }
 end
 

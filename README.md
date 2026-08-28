@@ -232,6 +232,7 @@ Slot 的 source of truth 是 Hammerspoon 端的 `SLOT_ORDER`（`"1"`..`"9"` 然�
 - 進入 mode：畫面中央會出現「Window Marks」
 - 標記成功：畫面中央會出現短提示
 - 切換成功：**不顯示**提示（乾淨）
+- 被標記的視窗若已縮小（minimize）或 App 被隱藏（Cmd+H），`focus_slot` 會先還原再聚焦
 - 該 slot 是空的：顯示「Slot X is empty」
 - 被標記的視窗被關掉時，該 slot 會自動清除
 - **不持久化**（Hammerspoon reload 後清空）
