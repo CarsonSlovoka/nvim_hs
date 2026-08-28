@@ -2,11 +2,11 @@
 --- nvim_hs.actions.window
 --- Window marks (slots 1-9 and a-z), similar to Age of Empires unit groups.
 ---
---- Hotkeys use a modal so Cmd+digit / Cmd+letter are not globally captured:
----   Cmd + F2                      → enter Window Marks mode
----   then Cmd + Option + 1..9|a..z → mark focused window into that slot
----   then Cmd + 1..9|a..z          → focus the window in that slot
----   Escape / Cmd+F2 / idle        → exit mode
+--- Hotkeys use a modal so slot keys are not globally captured:
+---   Cmd + F2                 → enter Window Marks mode
+---   then Cmd + 1..9|a..z     → mark focused window into that slot
+---   then 1..9|a..z           → focus the window in that slot
+---   Escape / Cmd+F2 / idle   → exit mode
 ---
 --- Actions:
 ---   window.mark        { slot = "1".."9"|"a".."z" }  (number 1-9 also accepted)
@@ -191,15 +191,15 @@ local function run_and_exit(fn, payload, on_err)
 end
 
 local function bind_slot(slot)
-  -- Mark: Cmd + Option + slot (only while modal is active)
-  marks_modal:bind({ "cmd", "option" }, slot, function()
+  -- Mark: Cmd + slot (only while modal is active)
+  marks_modal:bind({ "cmd" }, slot, function()
     run_and_exit(M.mark, { slot = slot }, function(msg)
       hs.alert.show(msg, 1.0)
     end)
   end)
 
-  -- Focus: Cmd + slot (only while modal is active)
-  marks_modal:bind({ "cmd" }, slot, function()
+  -- Focus: bare slot key (only while modal is active)
+  marks_modal:bind({}, slot, function()
     run_and_exit(M.focus_slot, { slot = slot }, function(msg)
       -- focus_slot already shows "Slot X is empty"; only show other errors
       if not msg:match("empty") then

@@ -217,17 +217,17 @@ Slot 的 source of truth 是 Hammerspoon 端的 `SLOT_ORDER`（`"1"`..`"9"` 然�
 
 ### 熱鍵（Hammerspoon modal）
 
-全域只佔一個前置鍵，避免 `Cmd+1..9` / `Cmd+a..z` 與其它 App / 系統熱鍵衝突。
+全域只佔一個前置鍵。標記 / 切換的按鍵只在 mode 內生效，因此不會長期佔領 `Cmd+A` 或數字鍵。
 
 | 熱鍵 | 行為 |
 |------|------|
 | `Cmd + F2` | 進入 Window Marks mode |
-| *mode 內* `Cmd + Option + 1`–`9` / `a`–`z` | 把目前 focused 視窗標記到對應 slot，然後離開 mode |
-| *mode 內* `Cmd + 1`–`9` / `a`–`z` | 切換到該 slot 的視窗，然後離開 mode |
+| *mode 內* `Cmd + 1`–`9` / `a`–`z` | 把目前 focused 視窗標記到對應 slot，然後離開 mode |
+| *mode 內* `1`–`9` / `a`–`z` | 切換到該 slot 的視窗，然後離開 mode |
 | *mode 內* `Escape` 或再按一次 `Cmd + F2` | 離開 mode |
 | 進入 mode 後約 5 秒沒動作 | 自動離開 mode |
 
-平時（未按 `Cmd+F2`）這些和弦 **不會**被這個 framework 攔截。
+平時（未按 `Cmd+F2`）這些按鍵 **不會**被這個 framework 攔截。
 
 - 進入 mode：畫面中央會出現「Window Marks」
 - 標記成功：畫面中央會出現短提示
