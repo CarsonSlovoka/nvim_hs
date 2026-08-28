@@ -1,24 +1,39 @@
 ---@diagnostic disable: undefined-global
 --- nvim_hs.actions.window
---- Window marks (slots 1-9), similar to Age of Empires unit groups.
+--- Window marks (slots 1-9 and a-z), similar to Age of Empires unit groups.
 ---
---- Hotkeys use a modal so Cmd+1..9 are not globally captured:
----   Cmd + F2                 → enter Window Marks mode
----   then Cmd + Option + 1..9 → mark focused window into that slot
----   then Cmd + 1..9          → focus the window in that slot
----   Escape / Cmd+F2 / idle   → exit mode
+--- Hotkeys use a modal so Cmd+digit / Cmd+letter are not globally captured:
+---   Cmd + F2                      → enter Window Marks mode
+---   then Cmd + Option + 1..9|a..z → mark focused window into that slot
+---   then Cmd + 1..9|a..z          → focus the window in that slot
+---   Escape / Cmd+F2 / idle        → exit mode
 ---
 --- Actions:
----   window.mark        { slot = N }
----   window.focus_slot  { slot = N }
+---   window.mark        { slot = "1".."9"|"a".."z" }  (number 1-9 also accepted)
+---   window.focus_slot  { slot = ... }
 ---   window.list_marks
----   window.clear_slot  { slot = N }
+---   window.clear_slot  { slot = ... }
 
 local registry = require("nvim_hs.registry")
 
 local M = {}
 
--- slot (1-9) → { win = hs.window, id = number }
+-- Canonical slot ids, in display order: "1".."9" then "a".."z"
+local SLOT_ORDER = {}
+local SLOT_SET = {}
+
+for i = 1, 9 do
+  local id = tostring(i)
+  SLOT_ORDER[#SLOT_ORDER + 1] = id
+  SLOT_SET[id] = true
+end
+for c = string.byte("a"), string.byte("z") do
+  local id = string.char(c)
+  SLOT_ORDER[#SLOT_ORDER + 1] = id
+  SLOT_SET[id] = true
+end
+
+-- slot id → { win = hs.window, id = number }
 local marks = {}
 
 local function is_valid(entry)
@@ -31,12 +46,21 @@ local function is_valid(entry)
   return ok and id ~= nil and id == entry.id
 end
 
+--- Normalize payload.slot to a canonical string id.
+--- Accepts number 1-9 (backward compatible) or string "1"-"9" / "a"-"z" (case-insensitive).
 local function get_slot(payload)
   local slot = payload and payload.slot
-  if type(slot) ~= "number" or slot < 1 or slot > 9 or slot ~= math.floor(slot) then
-    error("slot must be an integer from 1 to 9")
+  if type(slot) == "number" then
+    if slot >= 1 and slot <= 9 and slot == math.floor(slot) then
+      return tostring(slot)
+    end
+  elseif type(slot) == "string" then
+    local id = slot:lower()
+    if SLOT_SET[id] then
+      return id
+    end
   end
-  return slot
+  error("slot must be 1-9 or a-z")
 end
 
 local function window_info(win)
@@ -60,7 +84,7 @@ end
 
 --- Mark the currently focused window into the given slot.
 --- Shows a short alert on success.
---- @param payload table  { slot = 1..9 }
+--- @param payload table  { slot = "1".."9"|"a".."z"|1..9 }
 --- @return table
 function M.mark(payload)
   local slot = get_slot(payload)
@@ -72,7 +96,7 @@ function M.mark(payload)
 
   marks[slot] = { win = win, id = info.id }
 
-  hs.alert.show(string.format("Marked → slot %d\n%s", slot, info.title), 1.2)
+  hs.alert.show(string.format("Marked → slot %s\n%s", slot, info.title), 1.2)
 
   return {
     slot = slot,
@@ -83,7 +107,7 @@ end
 --- Focus the window stored in the given slot.
 --- Shows an alert only when the slot is empty.
 --- Success is silent (per design).
---- @param payload table  { slot = 1..9 }
+--- @param payload table  { slot = "1".."9"|"a".."z"|1..9 }
 --- @return table
 function M.focus_slot(payload)
   local slot = get_slot(payload)
@@ -91,7 +115,7 @@ function M.focus_slot(payload)
 
   if not is_valid(entry) then
     marks[slot] = nil
-    hs.alert.show(string.format("Slot %d is empty", slot), 1.0)
+    hs.alert.show(string.format("Slot %s is empty", slot), 1.0)
     error("Slot " .. slot .. " is empty")
   end
 
@@ -108,7 +132,7 @@ end
 --- @return table[]
 function M.list_marks(_payload)
   local result = {}
-  for slot = 1, 9 do
+  for _, slot in ipairs(SLOT_ORDER) do
     local entry = marks[slot]
     if is_valid(entry) then
       table.insert(result, {
@@ -123,7 +147,7 @@ function M.list_marks(_payload)
 end
 
 --- Clear a specific slot.
---- @param payload table  { slot = 1..9 }
+--- @param payload table  { slot = "1".."9"|"a".."z"|1..9 }
 --- @return table
 function M.clear_slot(payload)
   local slot = get_slot(payload)
@@ -140,7 +164,7 @@ function M.register()
 end
 
 -- Modal is only armed after Cmd+F2.  Inner chords therefore cannot collide
--- with other global Cmd+digit bindings while the mode is inactive.
+-- with other global Cmd+digit / Cmd+letter bindings while the mode is inactive.
 local marks_modal = nil
 local marks_timeout = nil
 local MARKS_TIMEOUT_SEC = 5
@@ -164,6 +188,25 @@ local function run_and_exit(fn, payload, on_err)
   if marks_modal then
     marks_modal:exit()
   end
+end
+
+local function bind_slot(slot)
+  -- Mark: Cmd + Option + slot (only while modal is active)
+  marks_modal:bind({ "cmd", "option" }, slot, function()
+    run_and_exit(M.mark, { slot = slot }, function(msg)
+      hs.alert.show(msg, 1.0)
+    end)
+  end)
+
+  -- Focus: Cmd + slot (only while modal is active)
+  marks_modal:bind({ "cmd" }, slot, function()
+    run_and_exit(M.focus_slot, { slot = slot }, function(msg)
+      -- focus_slot already shows "Slot X is empty"; only show other errors
+      if not msg:match("empty") then
+        hs.alert.show(msg, 1.0)
+      end
+    end)
+  end)
 end
 
 --- Bind modal hotkeys for mark / focus.
@@ -205,25 +248,8 @@ function M.setup_hotkeys()
     marks_modal:exit()
   end)
 
-  for i = 1, 9 do
-    local slot = i
-
-    -- Mark: Cmd + Option + number (only while modal is active)
-    marks_modal:bind({ "cmd", "option" }, tostring(slot), function()
-      run_and_exit(M.mark, { slot = slot }, function(msg)
-        hs.alert.show(msg, 1.0)
-      end)
-    end)
-
-    -- Focus: Cmd + number (only while modal is active)
-    marks_modal:bind({ "cmd" }, tostring(slot), function()
-      run_and_exit(M.focus_slot, { slot = slot }, function(msg)
-        -- focus_slot already shows "Slot N is empty"; only show other errors
-        if not msg:match("empty") then
-          hs.alert.show(msg, 1.0)
-        end
-      end)
-    end)
+  for _, slot in ipairs(SLOT_ORDER) do
+    bind_slot(slot)
   end
 end
 

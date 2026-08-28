@@ -15,7 +15,7 @@ require("nvim_hs.actions.audiodevice").register()
 
 local window = require("nvim_hs.actions.window")
 window.register()
-window.setup_hotkeys() -- Cmd+F2 modal: then Cmd+Option+1-9 mark, Cmd+1-9 focus
+window.setup_hotkeys() -- Cmd+F2 modal: then Cmd+Option+1-9|a-z mark, Cmd+1-9|a-z focus
 
 local M = {}
 

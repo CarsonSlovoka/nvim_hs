@@ -208,26 +208,31 @@ print(vim.inspect(require("nvim_hs").run('audiodevice.set_volume', { value=30 })
 
 ## 5. Window Marks（視窗標記槽）
 
-類似世紀帝國的部隊編隊，可把目前 focused 的視窗標記到 1~9 號槽，之後快速切換。
+類似世紀帝國的部隊編隊，可把目前 focused 的視窗標記到 slot `1`–`9` 或 `a`–`z`，之後快速切換。
+
+Slot 的 source of truth 是 Hammerspoon 端的 `SLOT_ORDER`（`"1"`..`"9"` 然後 `"a"`..`"z"`）。從 Neovim 傳 `slot` 時：
+
+- 數字 `1`–`9` 仍可用（會正規化成字串 `"1"`–`"9"`）
+- 字母請傳小寫字串，例如 `"a"`（大小寫都會被 lower）
 
 ### 熱鍵（Hammerspoon modal）
 
-全域只佔一個前置鍵，避免 `Cmd+1..9` 與其它 App / 系統熱鍵衝突。
+全域只佔一個前置鍵，避免 `Cmd+1..9` / `Cmd+a..z` 與其它 App / 系統熱鍵衝突。
 
 | 熱鍵 | 行為 |
 |------|------|
 | `Cmd + F2` | 進入 Window Marks mode |
-| *mode 內* `Cmd + Option + 1` ~ `9` | 把目前 focused 視窗標記到對應 slot，然後離開 mode |
-| *mode 內* `Cmd + 1` ~ `9` | 切換到該 slot 的視窗，然後離開 mode |
+| *mode 內* `Cmd + Option + 1`–`9` / `a`–`z` | 把目前 focused 視窗標記到對應 slot，然後離開 mode |
+| *mode 內* `Cmd + 1`–`9` / `a`–`z` | 切換到該 slot 的視窗，然後離開 mode |
 | *mode 內* `Escape` 或再按一次 `Cmd + F2` | 離開 mode |
 | 進入 mode 後約 5 秒沒動作 | 自動離開 mode |
 
-平時（未按 `Cmd+F2`）`Cmd+1..9` / `Cmd+Option+1..9` **不會**被這個 framework 攔截。
+平時（未按 `Cmd+F2`）這些和弦 **不會**被這個 framework 攔截。
 
 - 進入 mode：畫面中央會出現「Window Marks」
 - 標記成功：畫面中央會出現短提示
 - 切換成功：**不顯示**提示（乾淨）
-- 該 slot 是空的：顯示「Slot N is empty」
+- 該 slot 是空的：顯示「Slot X is empty」
 - 被標記的視窗被關掉時，該 slot 會自動清除
 - **不持久化**（Hammerspoon reload 後清空）
 - 若 `Cmd+F2` 沒反應：系統設定裡把 F1、F2 等當成標準功能鍵，或改按 `Fn+Cmd+F2`
@@ -236,9 +241,10 @@ print(vim.inspect(require("nvim_hs").run('audiodevice.set_volume', { value=30 })
 
 ```vim
 :Hs window.mark {"slot":3}
-:Hs window.focus_slot {"slot":3}
+:Hs window.mark {"slot":"a"}
+:Hs window.focus_slot {"slot":"a"}
 :Hs window.list_marks
-:Hs window.clear_slot {"slot":3}
+:Hs window.clear_slot {"slot":"a"}
 ```
 
 或在 Lua 中：
@@ -247,9 +253,10 @@ print(vim.inspect(require("nvim_hs").run('audiodevice.set_volume', { value=30 })
 local hs = require("nvim_hs")
 
 hs.run("window.mark", { slot = 3 })
-hs.run("window.focus_slot", { slot = 3 })
+hs.run("window.mark", { slot = "a" })
+hs.run("window.focus_slot", { slot = "a" })
 hs.run("window.list_marks")
--- → { ok = true, data = { { slot = 3, window = { id=..., title=..., app=... } }, ... } }
+-- → { ok = true, data = { { slot = "3", window = { ... } }, { slot = "a", window = { ... } }, ... } }
 ```
 
 ---
