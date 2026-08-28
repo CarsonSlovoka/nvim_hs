@@ -310,7 +310,46 @@ Buffer 文字只在 Neovim 解析。送給 Hammerspoon 的是：
 
 熱鍵日常切換仍可用；這張表負責批次重排
 
----
+#### 原理
+
+在nvim中建立一個buffer, 記得設定`buftype=acwrite`使得`:w`時可以觸發事件: `BufWriteCmd`
+
+之後再該事件觸發:
+
+> hs -c "require("nvim_hs").handle(b64_para)"
+
+當中的參數可以是buffer中的內容，再編碼而成 (這裡是觸發`window.apply_marks`)
+
+如此再寫hammerspoon所對應的接口(apply_marks)即可完成
+
+```sh
+git show -p 571d7cce:nvim/lua/nvim_hs/marks_buffer.lua | bat -l lua -P \
+      -r 203:210            \
+      -r 168:184            \
+      -r 137 -r 145:148
+
+# 203:210 command
+# 168:184 acwrite, apply_buf
+# 137:148 告知hs執行模組: window.apply_marks
+
+# nvim_hs.run 的細節
+git show -p 6d65aeb5:nvim/lua/nvim_hs.lua | bat -l lua -P -r 18 -r 29 -r 34 -r 39 -r 52:53
+## hs -c "require("nvim_hs").handle(b64_para)" 👈 這個就是跑hs的lua模組. 例如: window.apply_marks
+git show -p 2373ffc8:nvim/lua/nvim_hs/transport.lua | bat -l lua -P -r 32 \
+    -r 34 \
+    -r 16:23 \
+    -r 36:44
+
+# hammerspoon端
+git show -p 571d7cce:hammerspoon/nvim_hs/actions/window.lua | bat -l lua -P \
+    -r 368 -r 374:375 \
+    -r 301:302 \
+    -r 307:309 -r 311 -r 326:329 \
+    -r 331 -r 335 -r 345 -r 351 \
+    -r 357:359 -r 365 \
+    -r 21 -r 39
+```
+
 
 ## 6. Protocol
 
